@@ -1,0 +1,12 @@
+yt-dlp
+openai-whisper
+torch     # Use appropriate version if GPU is available (e.g., 'torch==2.0.1+cu118')
+torchvision
+torchaudio
+ffmpeg-python         # Optional Python wrapper for FFmpeg, not mandatory but useful
+faiss-cpu   
+sentence-transformers
+numpy
+transformers
+openai
+streamlit
