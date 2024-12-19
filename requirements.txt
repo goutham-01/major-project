@@ -9,4 +9,9 @@ sentence-transformers
 numpy
 transformers
 openai
-streamlit
+streamlit 
+
+#edit
+scipy
+numba
+llvmlite
