@@ -10,6 +10,36 @@ import whisper
 import streamlit as st
 import re  # Regular expressions for sanitizing filenames
 
+import os
+import shutil
+import requests
+from zipfile import ZipFile
+
+def download_ffmpeg():
+    ffmpeg_url = "https://github.com/BtbN/FFmpeg-Builds/releases/download/latest/ffmpeg-n4.4-latest-win64-gpl.zip"
+    ffmpeg_zip_path = "ffmpeg.zip"
+    ffmpeg_extracted_path = "ffmpeg"
+
+    # Download the zip file
+    if not os.path.exists(ffmpeg_zip_path):
+        print("Downloading FFmpeg...")
+        response = requests.get(ffmpeg_url, stream=True)
+        with open(ffmpeg_zip_path, 'wb') as file:
+            shutil.copyfileobj(response.raw, file)
+    
+    # Extract the zip file
+    if not os.path.exists(ffmpeg_extracted_path):
+        print("Extracting FFmpeg...")
+        with ZipFile(ffmpeg_zip_path, 'r') as zip_ref:
+            zip_ref.extractall(ffmpeg_extracted_path)
+
+    ffmpeg_path = os.path.join(ffmpeg_extracted_path, 'ffmpeg/bin/ffmpeg.exe')
+    return ffmpeg_path
+
+ffmpeg_path = download_ffmpeg()
+os.environ["PATH"] += os.pathsep + os.path.dirname(ffmpeg_path)
+
+
 def sanitize_filename(filename):
     """
     Sanitizes the filename by replacing special characters with underscores.
