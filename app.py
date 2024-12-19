@@ -46,12 +46,19 @@ def download_video(youtube_url, video_folder="video_downloads", audio_folder="au
     extract_audio(video_file, audio_file)
     return audio_file, sanitized_video_title
 
-def extract_audio(video_path, audio_path):
+def extract_audio(video_file, audio_file):
     """
     Extracts audio from a video file using FFmpeg.
     """
-    command = ["ffmpeg", "-y", "-i", video_path, "-q:a", "0", "-map", "a", audio_path]
-    subprocess.run(command, check=True)
+    #command = ["ffmpeg", "-y", "-i", video_path, "-q:a", "0", "-map", "a", audio_path]
+    #subprocess.run(command, check=True)
+    command = ['ffmpeg', '-i', video_file, '-vn', '-acodec', 'mp3', audio_file]
+
+    try:
+        result = subprocess.run(command, check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        print(result.stdout.decode())  # print standard output
+    except subprocess.CalledProcessError as e:
+        print(f"Error: {e.stderr.decode()}")  # print the error message
 
 
 def transcribe_audio(audio_path, model_name="base"):
