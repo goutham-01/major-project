@@ -8,22 +8,20 @@ import yt_dlp
 import subprocess
 import whisper
 import streamlit as st
-import re  # Regular expressions for sanitizing filenames
-
+import re
 
 def sanitize_filename(filename):
-    """Sanitize the filename by replacing special characters with underscores."""
+    """Sanitizes the filename by replacing special characters with underscores."""
     return re.sub(r'[\\/*?:"<>|]', '_', filename)
 
-
 def download_video(youtube_url, video_folder="video_downloads", audio_folder="audio_downloads"):
-    """Download a YouTube video and extract its audio."""
+    """Downloads a YouTube video and extracts audio. Renames the file to avoid special characters."""
     os.makedirs(video_folder, exist_ok=True)
     os.makedirs(audio_folder, exist_ok=True)
 
     ydl_opts = {
         'format': 'bestaudio/best',  # Download only the audio
-        'outtmpl': os.path.join(video_folder, '%(title)s.%(ext)s'),  # Save as title.ext
+        'outtmpl': os.path.join(video_folder, '%(title)s.%(ext)s'),  # Save with title as filename
     }
 
     with yt_dlp.YoutubeDL(ydl_opts) as ydl:
@@ -34,14 +32,19 @@ def download_video(youtube_url, video_folder="video_downloads", audio_folder="au
     video_file = os.path.join(video_folder, f"{sanitized_video_title}.mp4")
     audio_file = os.path.join(audio_folder, f"{sanitized_video_title}.mp3")
 
-    extract_audio(video_file, audio_file)
-    return audio_file, sanitized_video_title
+    if not os.path.exists(video_file):
+        raise FileNotFoundError(f"Video file not found at {video_file}")
+
+    return audio_file, video_file, sanitized_video_title
 
 
 def extract_audio(video_path, audio_path):
-    """Extract audio from the video using FFmpeg."""
+    """Extracts audio from a video file using FFmpeg."""
     video_path = os.path.abspath(video_path)
     audio_path = os.path.abspath(audio_path)
+
+    if not os.path.exists(video_path):
+        raise FileNotFoundError(f"Video file not found at {video_path}")
 
     command = ["ffmpeg", "-y", "-i", video_path, "-q:a", "0", "-map", "a", audio_path]
 
@@ -50,13 +53,6 @@ def extract_audio(video_path, audio_path):
     except subprocess.CalledProcessError as e:
         print(f"FFmpeg error: {e.stderr.decode()}")
         raise RuntimeError(f"Audio extraction failed: {e.stderr.decode()}")
-
-
-def transcribe_audio(audio_path, model_name="base"):
-    """Transcribe audio using Whisper."""
-    model = whisper.load_model(model_name)
-    result = model.transcribe(audio_path)
-    return result['text']
 
 
 # Streamlit App
@@ -68,15 +64,9 @@ youtube_url = st.text_input("Enter YouTube Video URL")
 if youtube_url:
     st.write("Downloading video and extracting audio...")
     try:
-        audio_file, video_title = download_video(youtube_url)
+        audio_file, video_file, video_title = download_video(youtube_url)
+        extract_audio(video_file, audio_file)
         st.write(f"Audio extracted: {audio_file}")
     except Exception as e:
         st.error(f"Error occurred during video/audio processing: {e}")
         st.stop()
-
-    st.write("Transcribing audio...")
-    try:
-        transcription = transcribe_audio(audio_file)
-        st.write(f"Transcription: {transcription[:200]}...")  # Print first 200 characters of transcription
-    except Exception as e:
-        st.error(f"Error during transcription: {e}")
