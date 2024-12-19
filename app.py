@@ -50,15 +50,15 @@ def extract_audio(video_path, audio_path):
     """
     Extracts audio from a video file using FFmpeg.
     """
-    #command = ["ffmpeg", "-y", "-i", video_path, "-q:a", "0", "-map", "a", audio_path]
-    #subprocess.run(command, check=True)
-    command = ['ffmpeg', '-i', video_path, '-vn', '-acodec', 'mp3', audio_path]
+    command = ["ffmpeg", "-y", "-i", video_path, "-q:a", "0", "-map", "a", audio_path]
+    subprocess.run(command, check=True)
+    """command = ['ffmpeg', '-i', video_path, '-vn', '-acodec', 'mp3', audio_path]
 
     try:
         result = subprocess.run(command, check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
         print(result.stdout.decode())  # print standard output
     except subprocess.CalledProcessError as e:
-        print(f"Error: {e.stderr.decode()}")  # print the error message
+        print(f"Error: {e.stderr.decode()}")  # print the error message"""
 
 
 def transcribe_audio(audio_path, model_name="base"):
