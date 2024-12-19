@@ -11,45 +11,6 @@ import streamlit as st
 import re  # Regular expressions for sanitizing filenames
 
 
-"""import os
-import shutil
-import requests
-import zipfile  # ✅ Import the zipfile module
-
-def download_ffmpeg():
-    ffmpeg_url = "https://github.com/BtbN/FFmpeg-Builds/releases/download/latest/ffmpeg-n4.4-latest-win64-gpl.zip"
-    ffmpeg_zip_path = "ffmpeg.zip"
-    ffmpeg_extracted_path = "ffmpeg"
-
-    try:
-        # Download the file if it doesn't exist
-        if not os.path.exists(ffmpeg_zip_path):
-            print("Downloading FFmpeg...")
-            response = requests.get(ffmpeg_url, stream=True)
-            with open(ffmpeg_zip_path, 'wb') as file:
-                shutil.copyfileobj(response.raw, file)
-
-        # Verify the file size to ensure it is not zero
-        if os.path.getsize(ffmpeg_zip_path) < 1024:  # Assuming 1KB is too small for the file
-            raise ValueError("Downloaded file is too small to be a ZIP file. Possible network issue.")
-
-        # Extract only if the ZIP is valid
-        print("Extracting FFmpeg...")
-        with zipfile.ZipFile(ffmpeg_zip_path, 'r') as zip_ref:  # ✅ zipfile.ZipFile instead of ZipFile
-            zip_ref.extractall(ffmpeg_extracted_path)
-        
-    except (requests.exceptions.RequestException, zipfile.BadZipFile, ValueError) as e:
-        print(f"Error: {e}")
-        if os.path.exists(ffmpeg_zip_path):
-            os.remove(ffmpeg_zip_path)  # Delete the corrupt file
-        raise e
-
-    ffmpeg_path = os.path.join(ffmpeg_extracted_path, 'ffmpeg/bin/ffmpeg.exe')
-    return ffmpeg_path 
-
-ffmpeg_path = download_ffmpeg()
-os.environ["PATH"] += os.pathsep + os.path.dirname(ffmpeg_path) """
-
 
 
 
