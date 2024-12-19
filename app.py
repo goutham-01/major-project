@@ -1,72 +1,149 @@
+import faiss
+import numpy as np
+from sentence_transformers import SentenceTransformer
+from transformers import pipeline
+import json
 import os
-import re
 import yt_dlp
 import subprocess
+import whisper
 import streamlit as st
+import re  # Regular expressions for sanitizing filenames
+
+
+
+
 
 def sanitize_filename(filename):
-    """Sanitizes the filename by replacing special characters with underscores."""
+    """
+    Sanitizes the filename by replacing special characters with underscores.
+    """
     return re.sub(r'[\\/*?:"<>|]', '_', filename)
 
-def get_downloaded_file_path(directory, title):
-    """Returns the actual file path of the downloaded file with any extension."""
-    sanitized_title = sanitize_filename(title)
-    for ext in ['mp4', 'm4a', 'webm']:
-        file_path = os.path.join(directory, f"{sanitized_title}.{ext}")
-        if os.path.exists(file_path):
-            return file_path
-    raise FileNotFoundError(f"Video file not found for title: {sanitized_title}")
-
 def download_video(youtube_url, video_folder="video_downloads", audio_folder="audio_downloads"):
-    """Downloads a YouTube video and extracts audio. Renames the file to avoid special characters."""
-    video_folder = os.path.abspath(video_folder)
-    audio_folder = os.path.abspath(audio_folder)
+    """
+    Downloads a YouTube video and extracts audio. Renames the file to avoid special characters.
+    """
     os.makedirs(video_folder, exist_ok=True)
     os.makedirs(audio_folder, exist_ok=True)
 
     ydl_opts = {
-        'format': 'bestaudio/best',
-        'outtmpl': os.path.join(video_folder, '%(title)s.%(ext)s'),
+        'format': 'bestvideo+bestaudio/best',  # Download the best video and audio streams
+        'merge_output_format': 'mp4',
+        'outtmpl': os.path.join(video_folder, '%(title)s.%(ext)s'),  # Save with title as filename
     }
 
     with yt_dlp.YoutubeDL(ydl_opts) as ydl:
         info = ydl.extract_info(youtube_url, download=True)
         video_title = info.get('title', 'video')
 
-    video_file = get_downloaded_file_path(video_folder, video_title)
-    audio_file = os.path.join(audio_folder, f"{sanitize_filename(video_title)}.mp3")
+    # Sanitize the video title to avoid special characters in filenames
+    sanitized_video_title = sanitize_filename(video_title)
 
-    return audio_file, video_file, sanitize_filename(video_title)
+    video_file = os.path.join(video_folder, f"{sanitized_video_title}.mp4")
+    audio_file = os.path.join(audio_folder, f"{sanitized_video_title}.mp3")
+
+    extract_audio(video_file, audio_file)
+    return audio_file, sanitized_video_title
 
 def extract_audio(video_path, audio_path):
-    """Extracts audio from a video file using FFmpeg."""
-    video_path = os.path.abspath(video_path)
-    audio_path = os.path.abspath(audio_path)
-
-    if not os.path.exists(video_path):
-        raise FileNotFoundError(f"Video file not found at {video_path}")
-
+    """
+    Extracts audio from a video file using FFmpeg.
+    """
     command = ["ffmpeg", "-y", "-i", video_path, "-q:a", "0", "-map", "a", audio_path]
+    subprocess.run(command, check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+   
 
-    try:
-        subprocess.run(command, check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-    except subprocess.CalledProcessError as e:
-        raise RuntimeError(f"Audio extraction failed: {e.stderr.decode()}")
+def transcribe_audio(audio_path, model_name="base"):
+    """
+    Transcribes audio to text using Whisper.
+    """
+    model = whisper.load_model(model_name)
+    result = model.transcribe(audio_path)
+    return result['text']
 
-# Streamlit App
+def initialize_faiss_database(embedding_dim):
+    """
+    Initializes a FAISS database for storing embeddings.
+    """
+    return faiss.IndexFlatL2(embedding_dim)
+
+def generate_embeddings(text, model_name="all-MiniLM-L6-v2"):
+    """
+    Generates embeddings for the given text using SentenceTransformers.
+    """
+    model = SentenceTransformer(model_name)
+    return np.array(model.encode([text]), dtype='float32')
+
+def add_to_faiss(index, embeddings, metadata, metadata_file="metadata.json"):
+    """
+    Adds embeddings and metadata to the FAISS database and saves metadata to a file.
+    """
+    index.add(embeddings)
+    with open(metadata_file, "w") as file:
+        json.dump(metadata, file)
+
+def search_faiss(index, query_embedding, top_k=3):
+    """
+    Searches the FAISS database for the closest embeddings to the query.
+    """
+    distances, indices = index.search(query_embedding, top_k)
+    return indices[0], distances[0]
+
+def load_metadata(metadata_file="metadata.json"):
+    """
+    Loads metadata from a JSON file.
+    """
+    with open(metadata_file, "r") as file:
+        metadata = json.load(file)
+    return metadata
+
+def retrieve_context(index, query, metadata_file="metadata.json", model_name="all-MiniLM-L6-v2"):
+    """
+    Retrieves the most relevant context for a given user query.
+    """
+    query_embedding = generate_embeddings(query, model_name)
+    indices, _ = search_faiss(index, query_embedding)
+    metadata = load_metadata(metadata_file)
+    results = [metadata[idx]['transcription'] for idx in indices]
+    return " ".join(results)
+
+def generate_answer_with_huggingface(context, query):
+    """
+    Generates an answer using Hugging Face Transformers.
+    """
+    model_name = "google/flan-t5-base"  # Change to a model that suits your task
+    question_answering_pipeline = pipeline("text2text-generation", model=model_name)
+
+    # Prepare input for the model
+    prompt = f"Context: {context}\nQuestion: {query}\nAnswer:"
+    response = question_answering_pipeline(prompt, max_length=100, num_return_sequences=1)
+
+    return response[0]["generated_text"]
+
+# Streamlit App Interface
 st.title("RAG-based Video Q&A System")
 st.subheader("Enter YouTube Video URL and ask questions")
 
+# User Input: Video URL
 youtube_url = st.text_input("Enter YouTube Video URL")
 
 if youtube_url:
-    st.write("Downloading video and extracting audio...")
-    try:
-        audio_file, video_file, video_title = download_video(youtube_url)
-        st.write(f"Video file found: {video_file}")
-        extract_audio(video_file, audio_file)
-        st.write(f"Audio extracted: {audio_file}")
-    except Exception as e:
-        st.error(f"Error occurred during video/audio processing: {e}")
-        st.stop()
+    # Download and Transcribe (transcription is only used for embedding and context retrieval)
+    audio_file, video_title = download_video(youtube_url)
+    transcription = transcribe_audio(audio_file)
 
+    # Initialize FAISS and Add Embedding
+    faiss_index = initialize_faiss_database(384)
+    embedding = generate_embeddings(transcription)
+    add_to_faiss(faiss_index, embedding, [{"video_title": video_title, "transcription": transcription}])
+
+    # User Query
+    query = st.text_input("Ask a question about the video:")
+
+    if query:
+        context = retrieve_context(faiss_index, query)
+
+        # Generate answer
+        answer = generate_answer_with_huggingface(context, query)
+        st.write(f"Answer: {answer}")
