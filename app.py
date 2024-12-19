@@ -10,10 +10,11 @@ import whisper
 import streamlit as st
 import re  # Regular expressions for sanitizing filenames
 
+
 import os
 import shutil
 import requests
-from zipfile import ZipFile
+import zipfile  # ✅ Import the zipfile module
 
 def download_ffmpeg():
     ffmpeg_url = "https://github.com/BtbN/FFmpeg-Builds/releases/download/latest/ffmpeg-n4.4-latest-win64-gpl.zip"
@@ -34,7 +35,7 @@ def download_ffmpeg():
 
         # Extract only if the ZIP is valid
         print("Extracting FFmpeg...")
-        with ZipFile(ffmpeg_zip_path, 'r') as zip_ref:
+        with zipfile.ZipFile(ffmpeg_zip_path, 'r') as zip_ref:  # ✅ zipfile.ZipFile instead of ZipFile
             zip_ref.extractall(ffmpeg_extracted_path)
         
     except (requests.exceptions.RequestException, zipfile.BadZipFile, ValueError) as e:
@@ -48,6 +49,7 @@ def download_ffmpeg():
 
 ffmpeg_path = download_ffmpeg()
 os.environ["PATH"] += os.pathsep + os.path.dirname(ffmpeg_path)
+
 
 
 
