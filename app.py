@@ -46,13 +46,13 @@ def download_video(youtube_url, video_folder="video_downloads", audio_folder="au
     extract_audio(video_file, audio_file)
     return audio_file, sanitized_video_title
 
-def extract_audio(video_file, audio_file):
+def extract_audio(video_path, audio_path):
     """
     Extracts audio from a video file using FFmpeg.
     """
     #command = ["ffmpeg", "-y", "-i", video_path, "-q:a", "0", "-map", "a", audio_path]
     #subprocess.run(command, check=True)
-    command = ['ffmpeg', '-i', video_file, '-vn', '-acodec', 'mp3', audio_file]
+    command = ['ffmpeg', '-i', video_path, '-vn', '-acodec', 'mp3', audio_path]
 
     try:
         result = subprocess.run(command, check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
