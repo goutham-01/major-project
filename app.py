@@ -51,7 +51,7 @@ def extract_audio(video_path, audio_path):
     Extracts audio from a video file using FFmpeg.
     """
     command = ["ffmpeg", "-y", "-i", video_path, "-q:a", "0", "-map", "a", audio_path]
-    subprocess.run(command, check=True)
+    subprocess.run(command, check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     """command = ['ffmpeg', '-i', video_path, '-vn', '-acodec', 'mp3', audio_path]
 
     try:
