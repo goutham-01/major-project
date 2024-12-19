@@ -11,7 +11,7 @@ import streamlit as st
 import re  # Regular expressions for sanitizing filenames
 
 
-import os
+"""import os
 import shutil
 import requests
 import zipfile  # ✅ Import the zipfile module
@@ -45,10 +45,10 @@ def download_ffmpeg():
         raise e
 
     ffmpeg_path = os.path.join(ffmpeg_extracted_path, 'ffmpeg/bin/ffmpeg.exe')
-    return ffmpeg_path
+    return ffmpeg_path 
 
 ffmpeg_path = download_ffmpeg()
-os.environ["PATH"] += os.pathsep + os.path.dirname(ffmpeg_path)
+os.environ["PATH"] += os.pathsep + os.path.dirname(ffmpeg_path) """
 
 
 
