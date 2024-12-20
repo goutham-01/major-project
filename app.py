@@ -10,10 +10,6 @@ import whisper
 import streamlit as st
 import re  # Regular expressions for sanitizing filenames
 
-
-
-
-
 def sanitize_filename(filename):
     """
     Sanitizes the filename by replacing special characters with underscores.
@@ -43,24 +39,33 @@ def download_video(youtube_url, video_folder="video_downloads", audio_folder="au
     video_file = os.path.join(video_folder, f"{sanitized_video_title}.mp4")
     audio_file = os.path.join(audio_folder, f"{sanitized_video_title}.mp3")
 
-    extract_audio(video_file, audio_file)
-    return audio_file, sanitized_video_title
+    try:
+        extract_audio(video_file, audio_file)
+        return audio_file, sanitized_video_title
+    finally:
+        # Delete the video file after extracting audio
+        if os.path.exists(video_file):
+            os.remove(video_file)
 
 def extract_audio(video_path, audio_path):
     """
     Extracts audio from a video file using FFmpeg.
     """
     command = ["ffmpeg", "-y", "-i", video_path, "-q:a", "0", "-map", "a", audio_path]
-    subprocess.run(command, check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-   
+    subprocess.run(command, check=True)
 
 def transcribe_audio(audio_path, model_name="base"):
     """
     Transcribes audio to text using Whisper.
     """
     model = whisper.load_model(model_name)
-    result = model.transcribe(audio_path)
-    return result['text']
+    try:
+        result = model.transcribe(audio_path)
+        return result['text']
+    finally:
+        # Delete the audio file after transcription
+        if os.path.exists(audio_path):
+            os.remove(audio_path)
 
 def initialize_faiss_database(embedding_dim):
     """
